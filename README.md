@@ -5,6 +5,7 @@ A command-line wrapper for the [ntfs-reader](https://crates.io/crates/ntfs-reade
 ## Features
 
 - **MFT Reading**: List all files on an NTFS volume instantly (in-memory scan)
+- **Pattern Matching**: Filter files using glob patterns (`*.pdf`) or regex
 - **USN Journal Monitoring**: Track file system changes in real-time
 - **JSON Output**: Easy integration with any programming language
 - **CSV Output**: For data analysis and spreadsheet import
@@ -39,8 +40,17 @@ ntfs-reader-cli list-files --volume C:
 # List only directories
 ntfs-reader-cli list-files --volume C: --directories-only
 
-# Filter by path pattern
+# Filter by path (substring match)
 ntfs-reader-cli list-files --volume C: --filter "Program Files"
+
+# Filter by glob pattern - all PDF files
+ntfs-reader-cli list-files --volume C: --filter "*.pdf"
+
+# Filter by glob pattern - all .txt files in Documents
+ntfs-reader-cli list-files --volume C: --filter "*\\Documents\\*.txt"
+
+# Filter by regex - files ending with .pdf, .doc, or .docx
+ntfs-reader-cli list-files --volume C: --filter "\\.(pdf|docx?)$"
 
 # Limit results
 ntfs-reader-cli list-files --volume C: --limit 100
@@ -61,14 +71,20 @@ ntfs-reader-cli journal --volume C:
 # Read from the beginning of the journal
 ntfs-reader-cli journal --volume C: --from-start
 
+# Get last 10 events
+ntfs-reader-cli journal --volume C: --max-events 10
+
+# Get last 50 events as pretty JSON
+ntfs-reader-cli journal --volume C: --max-events 50 --output json-pretty
+
 # Continuous monitoring (outputs events as they happen)
 ntfs-reader-cli journal --volume C: --continuous
 
 # Monitor only file creation events (reason mask: 0x00000100)
 ntfs-reader-cli journal --volume C: --reason-mask 256 --continuous
 
-# Limit number of events
-ntfs-reader-cli journal --volume C: --max-events 50
+# Monitor continuously but stop after 20 events
+ntfs-reader-cli journal --volume C: --continuous --max-events 20
 ```
 
 ### Get Specific File Info

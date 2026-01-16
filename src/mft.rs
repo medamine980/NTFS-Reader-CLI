@@ -3,6 +3,7 @@ use ntfs_reader::file_info::FileInfo;
 use ntfs_reader::mft::Mft;
 use ntfs_reader::volume::Volume;
 use serde::{Deserialize, Serialize};
+use regex::Regex;
 
 use crate::OutputFormat;
 
@@ -71,7 +72,34 @@ pub fn list_files(
     
     eprintln!("Iterating files...");
     let mut records = Vec::new();
-    let filter_lower = filter.map(|f| f.to_lowercase());
+    
+    // Compile regex if filter looks like a pattern or regex
+    let filter_regex = filter.and_then(|f| {
+        // Convert glob patterns like *.pdf to regex
+        let pattern = if f.contains('*') || f.contains('?') {
+            let regex_pattern = f
+                .replace('\\', "\\\\")
+                .replace('.', "\\.")
+                .replace('*', ".*")
+                .replace('?', ".")
+                .to_lowercase();
+            Some(regex_pattern)
+        } else if f.starts_with('^') || f.contains('[') || f.contains('(') {
+            // Looks like regex
+            Some(f.to_lowercase())
+        } else {
+            // Simple substring search
+            None
+        };
+        
+        pattern.and_then(|p| Regex::new(&p).ok())
+    });
+    
+    let filter_simple = if filter_regex.is_none() {
+        filter.map(|f| f.to_lowercase())
+    } else {
+        None
+    };
 
     mft.iterate_files(|file| {
         let info = FileInfo::new(&mft, file);
@@ -81,7 +109,13 @@ pub fn list_files(
             return;
         }
         
-        if let Some(ref filter_str) = filter_lower {
+        // Apply filter (regex or simple substring)
+        if let Some(ref regex) = filter_regex {
+            let path_lower = info.path.to_string_lossy().to_lowercase();
+            if !regex.is_match(&path_lower) {
+                return;
+            }
+        } else if let Some(ref filter_str) = filter_simple {
             let path_lower = info.path.to_string_lossy().to_lowercase();
             if !path_lower.contains(filter_str) {
                 return;
