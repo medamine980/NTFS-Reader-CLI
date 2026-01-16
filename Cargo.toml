@@ -2,9 +2,10 @@
 name = "ntfs-reader-cli"
 version = "0.1.0"
 edition = "2021"
-authors = ["Your Name <you@example.com>"]
+authors = ["Mohamed-Amine Benali <benali.medamine2002@gmail.com>"]
 description = "Command-line wrapper for ntfs-reader library"
 license = "MIT OR Apache-2.0"
+repository = "https://github.com/medamine980/NTFS-Reader-CLI"
 
 [[bin]]
 name = "ntfs-reader-cli"
