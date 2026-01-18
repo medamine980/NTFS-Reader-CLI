@@ -207,6 +207,11 @@ pub fn file_info(volume: &str, record_number: u64, output: OutputFormat) -> Resu
             let encoded = bincode::serialize(&record)?;
             std::io::stdout().write_all(&encoded)?;
         }
+        OutputFormat::Msgpack => {
+            let mut buf = Vec::new();
+            rmp_serde::encode::write(&mut buf, &record)?;
+            std::io::stdout().write_all(&buf)?;
+        }
         OutputFormat::Csv => {
             output_csv_header()?;
             output_csv_record(&record)?;
@@ -227,6 +232,11 @@ fn output_records(records: &[FileRecord], output: OutputFormat) -> Result<()> {
         OutputFormat::Bincode => {
             let encoded = bincode::serialize(&records)?;
             std::io::stdout().write_all(&encoded)?;
+        }
+        OutputFormat::Msgpack => {
+            let mut buf = Vec::new();
+            rmp_serde::encode::write(&mut buf, &records)?;
+            std::io::stdout().write_all(&buf)?;
         }
         OutputFormat::Csv => {
             output_csv_header()?;

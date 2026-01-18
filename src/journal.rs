@@ -120,6 +120,12 @@ pub fn monitor_journal(
                         std::io::stdout().write_all(&encoded)?;
                         std::io::stdout().flush()?;
                     }
+                    OutputFormat::Msgpack => {
+                        let mut buf = Vec::new();
+                        rmp_serde::encode::write(&mut buf, &journal_event)?;
+                        std::io::stdout().write_all(&buf)?;
+                        std::io::stdout().flush()?;
+                    }
                     OutputFormat::Csv => {
                         if total_read == 0 {
                             output_csv_header()?;
@@ -183,6 +189,11 @@ fn output_events(events: &[JournalEvent], output: OutputFormat) -> Result<()> {
         OutputFormat::Bincode => {
             let encoded = bincode::serialize(&events)?;
             std::io::stdout().write_all(&encoded)?;
+        }
+        OutputFormat::Msgpack => {
+            let mut buf = Vec::new();
+            rmp_serde::encode::write(&mut buf, &events)?;
+            std::io::stdout().write_all(&buf)?;
         }
         OutputFormat::Csv => {
             output_csv_header()?;
