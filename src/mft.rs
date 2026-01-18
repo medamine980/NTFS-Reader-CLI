@@ -2,10 +2,18 @@ use anyhow::{Context, Result};
 use ntfs_reader::file_info::FileInfo;
 use ntfs_reader::mft::Mft;
 use ntfs_reader::volume::Volume;
+use ntfs_reader::api::NtfsAttributeType;
 use serde::{Deserialize, Serialize};
 use regex::Regex;
+use std::io::Write;
 
 use crate::OutputFormat;
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AlternateDataStream {
+    pub name: String,
+    pub size: u64,
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FileRecord {
@@ -16,10 +24,44 @@ pub struct FileRecord {
     pub created: Option<String>,
     pub modified: Option<String>,
     pub accessed: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    pub alternate_data_streams: Vec<AlternateDataStream>,
 }
 
 impl FileRecord {
-    fn from_file_info(info: &FileInfo) -> Self {
+    fn from_file_info(info: &FileInfo, _mft: &Mft, file: &ntfs_reader::file::NtfsFile) -> Self {
+        // Enumerate all Data attributes (including named ones = ADS)
+        let mut alternate_data_streams = Vec::new();
+        
+        file.attributes(|attr| {
+            if attr.header.type_id == NtfsAttributeType::Data as u32 {
+                // Check if this is a named attribute (ADS)
+                let name_length = attr.header.name_length as usize;
+                if name_length > 0 {
+                    // Extract the name
+                    let name_offset = attr.header.name_offset as usize;
+                    let attr_data = attr.data();
+                    if name_offset + (name_length * 2) <= attr_data.len() {
+                        let name_bytes = &attr_data[name_offset..name_offset + (name_length * 2)];
+                        let name_u16: Vec<u16> = name_bytes
+                            .chunks_exact(2)
+                            .map(|chunk| u16::from_le_bytes([chunk[0], chunk[1]]))
+                            .collect();
+                        let name = String::from_utf16_lossy(&name_u16);
+                        
+                        // Get size
+                        let size = if attr.header.is_non_resident == 0 {
+                            attr.resident_header().map(|h| h.value_length as u64).unwrap_or(0)
+                        } else {
+                            attr.nonresident_header().map(|h| h.data_size).unwrap_or(0)
+                        };
+                        
+                        alternate_data_streams.push(AlternateDataStream { name, size });
+                    }
+                }
+            }
+        });
+        
         FileRecord {
             name: info.name.clone(),
             path: info.path.to_string_lossy().to_string(),
@@ -28,6 +70,7 @@ impl FileRecord {
             created: info.created.map(|t| format_time(t)),
             modified: info.modified.map(|t| format_time(t)),
             accessed: info.accessed.map(|t| format_time(t)),
+            alternate_data_streams,
         }
     }
 }
@@ -122,7 +165,7 @@ pub fn list_files(
             }
         }
         
-        records.push(FileRecord::from_file_info(&info));
+        records.push(FileRecord::from_file_info(&info, &mft, file));
         
         if let Some(lim) = limit {
             if records.len() >= lim {
@@ -151,7 +194,7 @@ pub fn file_info(volume: &str, record_number: u64, output: OutputFormat) -> Resu
         .context(format!("Record {} not found or invalid", record_number))?;
     
     let info = FileInfo::new(&mft, &file);
-    let record = FileRecord::from_file_info(&info);
+    let record = FileRecord::from_file_info(&info, &mft, &file);
     
     match output {
         OutputFormat::Json => {
@@ -159,6 +202,10 @@ pub fn file_info(volume: &str, record_number: u64, output: OutputFormat) -> Resu
         }
         OutputFormat::JsonPretty => {
             println!("{}", serde_json::to_string_pretty(&record)?);
+        }
+        OutputFormat::Bincode => {
+            let encoded = bincode::serialize(&record)?;
+            std::io::stdout().write_all(&encoded)?;
         }
         OutputFormat::Csv => {
             output_csv_header()?;
@@ -176,6 +223,10 @@ fn output_records(records: &[FileRecord], output: OutputFormat) -> Result<()> {
         }
         OutputFormat::JsonPretty => {
             println!("{}", serde_json::to_string_pretty(&records)?);
+        }
+        OutputFormat::Bincode => {
+            let encoded = bincode::serialize(&records)?;
+            std::io::stdout().write_all(&encoded)?;
         }
         OutputFormat::Csv => {
             output_csv_header()?;

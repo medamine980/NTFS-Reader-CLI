@@ -90,6 +90,7 @@ enum OutputFormat {
     Json,
     JsonPretty,
     Csv,
+    Bincode,
 }
 
 impl std::str::FromStr for OutputFormat {
@@ -100,6 +101,7 @@ impl std::str::FromStr for OutputFormat {
             "json" => Ok(OutputFormat::Json),
             "json-pretty" | "pretty" => Ok(OutputFormat::JsonPretty),
             "csv" => Ok(OutputFormat::Csv),
+            "bincode" | "bin" => Ok(OutputFormat::Bincode),
             _ => Err(format!("Invalid output format: {}", s)),
         }
     }

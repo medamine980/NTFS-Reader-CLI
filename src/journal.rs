@@ -4,6 +4,7 @@ use ntfs_reader::volume::Volume;
 use serde::{Deserialize, Serialize};
 use std::thread;
 use std::time::Duration;
+use std::io::Write;
 
 use crate::OutputFormat;
 
@@ -114,6 +115,11 @@ pub fn monitor_journal(
                     OutputFormat::JsonPretty => {
                         println!("{}", serde_json::to_string_pretty(&journal_event)?);
                     }
+                    OutputFormat::Bincode => {
+                        let encoded = bincode::serialize(&journal_event)?;
+                        std::io::stdout().write_all(&encoded)?;
+                        std::io::stdout().flush()?;
+                    }
                     OutputFormat::Csv => {
                         if total_read == 0 {
                             output_csv_header()?;
@@ -173,6 +179,10 @@ fn output_events(events: &[JournalEvent], output: OutputFormat) -> Result<()> {
         }
         OutputFormat::JsonPretty => {
             println!("{}", serde_json::to_string_pretty(&events)?);
+        }
+        OutputFormat::Bincode => {
+            let encoded = bincode::serialize(&events)?;
+            std::io::stdout().write_all(&encoded)?;
         }
         OutputFormat::Csv => {
             output_csv_header()?;
