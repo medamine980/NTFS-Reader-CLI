@@ -33,8 +33,8 @@ enum Commands {
         #[arg(short, long)]
         limit: Option<usize>,
 
-        /// Output format
-        #[arg(short, long, default_value = "json")]
+        /// Output format: json, json-pretty, csv, bincode, msgpack
+        #[arg(short, long, default_value = "json", value_name = "FORMAT")]
         output: OutputFormat,
     },
 
@@ -64,8 +64,8 @@ enum Commands {
         #[arg(short, long)]
         continuous: bool,
 
-        /// Output format
-        #[arg(short, long, default_value = "json")]
+        /// Output format: json, json-pretty, csv, bincode, msgpack
+        #[arg(short, long, default_value = "json", value_name = "FORMAT")]
         output: OutputFormat,
     },
 
@@ -79,8 +79,8 @@ enum Commands {
         #[arg(short, long)]
         record: u64,
 
-        /// Output format
-        #[arg(short, long, default_value = "json")]
+        /// Output format: json, json-pretty, csv, bincode, msgpack
+        #[arg(short, long, default_value = "json", value_name = "FORMAT")]
         output: OutputFormat,
     },
 }
