@@ -22,7 +22,7 @@ A command-line wrapper for the [ntfs-reader](https://crates.io/crates/ntfs-reade
 ### Build from Source
 
 ```powershell
-git clone <your-repo>
+git clone https://github.com/medamine980/NTFS-Reader-CLI
 cd ntfs-reader-cli
 cargo build --release
 ```
